@@ -17,13 +17,19 @@ jobs:
           remove-haskell: 'true'
           remove-codeql: 'true'
           remove-docker-images: 'true'
-      - name: Check available space
+      - name: Free root partition space
         run: |
-          echo "=== Disk space ==="
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+          sudo rm -rf /usr/share/swift
+          sudo docker image prune -a -f
+          sudo apt-get clean
+          sudo rm -rf /var/cache/apt/archives/*
+          sudo rm -rf /var/lib/apt/lists/*
+          echo "=== Root partition space ==="
           df -h /
-          df -h /home/runner
-          echo "=== Memory ==="
-          free -h
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup environment
