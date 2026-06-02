@@ -1,0 +1,126 @@
+name: Build M28C OpenWrt
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 5120
+          swap-size-mb: 2048
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
+      - name: Check available space
+        run: |
+          echo "=== Disk space ==="
+          df -h /
+          df -h /home/runner
+          echo "=== Memory ==="
+          free -h
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup environment
+        run: |
+          sudo ./install-env.sh
+      - name: Prepare
+        run: |
+          ./prepare.sh
+      - name: Cache OpenWrt dl and toolchain
+        uses: actions/cache@v3
+        if: always()
+        with:
+          path: |
+            lede/dl
+            lede/staging_dir
+          key: ${{ runner.os }}-openwrt-${{ hashFiles('lede/feeds.conf.default', 'm28c.config') }}
+      - name: Build
+        run: |
+          ./build.sh
+      - name: Prepare release assets
+        run: |
+          mkdir -p release_assets
+          cp lede/bin/targets/rockchip/armv8/*.img.gz release_assets/ || true
+          cp lede/bin/targets/rockchip/armv8/openwrt-rockchip-armv8-widora_mangopi-m28c.manifest release_assets/ || true
+          cp lede/bin/targets/rockchip/armv8/config.buildinfo release_assets/ || true
+          cp lede/bin/targets/rockchip/armv8/feeds.buildinfo release_assets/ || true
+          cp lede/bin/targets/rockchip/armv8/profiles.json release_assets/ || true
+          cp lede/bin/targets/rockchip/armv8/version.buildinfo release_assets/ || true
+          cp lede/bin/targets/rockchip/armv8/sha256sums release_assets/ || true
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: release_assets/
+      - name: Disk usage summary
+        if: always()
+        run: |
+          df -h
+          du -h --max-depth=2
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: release_assets/
+      - name: Get release info
+        id: release-prepare
+        run: |
+          current_date=$(TZ=Asia/Shanghai date +'%y%m%d')
+          current_time=$(TZ=Asia/Shanghai date +'%H%M%S')
+          echo "current_date=${current_date}" >> $GITHUB_OUTPUT
+          echo "current_time=${current_time}" >> $GITHUB_OUTPUT
+          RELEASE_DATE=$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')
+          VERSION=$(cat release_assets/version.buildinfo | grep '^r' | head -n 1)
+          echo "RELEASE_TITLE=${RELEASE_DATE} - ${VERSION}" >> $GITHUB_OUTPUT
+      - name: Check for changes since last tag
+        id: check-changes
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$latest_tag" ]; then
+            echo "needs_new_tag=true" >> $GITHUB_OUTPUT
+            echo "new_tag=v0.${{ steps.release-prepare.outputs.current_date }}.${{ steps.release-prepare.outputs.current_time }}" >> $GITHUB_OUTPUT
+          else
+            has_changes=$(git diff --quiet $latest_tag HEAD || echo "true")
+            if [ -n "$has_changes" ]; then
+              echo "needs_new_tag=true" >> $GITHUB_OUTPUT
+              echo "new_tag=v0.${{ steps.release-prepare.outputs.current_date }}.${{ steps.release-prepare.outputs.current_time }}" >> $GITHUB_OUTPUT
+            else
+              echo "needs_new_tag=false" >> $GITHUB_OUTPUT
+              echo "new_tag=$latest_tag" >> $GITHUB_OUTPUT
+            fi
+          fi
+      - name: Create new tag if needed
+        if: steps.check-changes.outputs.needs_new_tag == 'true'
+        run: |
+          git tag ${{ steps.check-changes.outputs.new_tag }}
+          git push origin ${{ steps.check-changes.outputs.new_tag }}
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.check-changes.outputs.new_tag }}
+          name: ${{ steps.release-prepare.outputs.RELEASE_TITLE }}
+          body_path: release_assets/openwrt-rockchip-armv8-widora_mangopi-m28c.manifest
+          files: |
+            release_assets/*.img.gz
+            release_assets/openwrt-rockchip-armv8-widora_mangopi-m28c.manifest
+            release_assets/config.buildinfo
+            release_assets/feeds.buildinfo
+            release_assets/profiles.json
+            release_assets/version.buildinfo
+            release_assets/sha256sums
