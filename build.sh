@@ -22,7 +22,7 @@ echo "Install feeds"
 ./scripts/feeds install -a || { echo "install feeds failed"; exit 1; }
 
 echo "Install qmodem feeds"
-./scripts/feeds install -a -p qmodem || { echo "install qmodem feeds failed"; exit 1; }
+./scripts/feeds install -a -p qmodem || { echo "install qmodem feeds failed"; exit 1; }  # 去掉 -f 选项
 
 # 导入配置文件并检查
 if [ ! -f "../m28c.config" ]; then
@@ -40,7 +40,7 @@ diff ../m28c.config .config || echo "Note: Config differences are normal (defcon
 echo "Download dependencies (with retries)"
 retry=3
 while [ $retry -gt 0 ]; do
-    make download -j4 && break
+    make download -j$(nproc) && break
     retry=$((retry - 1))
     echo "Download failed, retrying... (remaining: $retry)"
     sleep 5
@@ -50,27 +50,6 @@ if [ $retry -eq 0 ]; then
     exit 1
 fi
 
-echo "Start compiling with verbose logs (V=s, log saved to ../build.log)"
-make V=s -j$(nproc) 2>&1 | tee ../build.log
-ret=${PIPESTATUS[0]}
-
-if [ $ret -ne 0 ]; then
-    echo ""
-    echo "========================================="
-    echo "  BUILD FAILED (exit code: $ret)"
-    echo "========================================="
-    echo ""
-    echo "=== Last 150 lines of build.log ==="
-    tail -150 ../build.log
-    echo ""
-    echo "=== Error/Fatal lines from build.log ==="
-    grep -n -i "error\|fatal\|failed\|cannot\|No such file\|undefined" ../build.log | grep -v "^[0-9]*:.*CONFIG_" | grep -v "^[0-9]*:.*#" | tail -30
-    echo ""
-    echo "=== Disk space after build ==="
-    df -h .
-    exit 1
-fi
-
-echo "Build successful!"
-echo "=== Disk space after build ==="
-df -h .
+echo "Start compiling with verbose logs"
+make V=0 -j$(nproc) || { echo "make failed"; exit 1; }
+#make V=s -j$(nproc) || { echo "make failed"; exit 1; }  # 详细日志
