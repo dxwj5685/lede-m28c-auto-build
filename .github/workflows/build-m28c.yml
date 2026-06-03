@@ -30,6 +30,13 @@ jobs:
           sudo rm -rf /var/lib/apt/lists/*
           echo "=== Root partition space ==="
           df -h /
+      - name: Setup build temp dirs on large partition
+        run: |
+          mkdir -p /home/runner/tmp
+          echo "TMPDIR=/home/runner/tmp" >> $GITHUB_ENV
+          echo "TMP=/home/runner/tmp" >> $GITHUB_ENV
+          echo "TEMP=/home/runner/tmp" >> $GITHUB_ENV
+          echo "HOME=/home/runner" >> $GITHUB_ENV
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup environment
@@ -38,6 +45,11 @@ jobs:
       - name: Prepare
         run: |
           ./prepare.sh
+      - name: Free root space before build
+        run: |
+          sudo rm -rf /tmp/* /var/tmp/*
+          echo "=== Space before build ==="
+          df -h /
       - name: Cache OpenWrt dl and toolchain
         uses: actions/cache@v3
         if: always()
