@@ -125,17 +125,13 @@ jobs:
               echo "new_tag=$latest_tag" >> $GITHUB_OUTPUT
             fi
           fi
-      - name: Create new tag if needed
-        if: steps.check-changes.outputs.needs_new_tag == 'true'
-        run: |
-          git tag ${{ steps.check-changes.outputs.new_tag }}
-          git push origin ${{ steps.check-changes.outputs.new_tag }}
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.check-changes.outputs.new_tag }}
           name: ${{ steps.release-prepare.outputs.RELEASE_TITLE }}
           body_path: release_assets/openwrt-rockchip-armv8-widora_mangopi-m28c.manifest
+          make_latest: true
           files: |
             release_assets/*.img.gz
             release_assets/openwrt-rockchip-armv8-widora_mangopi-m28c.manifest
