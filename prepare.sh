@@ -27,10 +27,3 @@ if [ -d "package/zz/luci-theme-alpha" ]; then
 else
     git clone https://github.com/derisamedia/luci-theme-alpha.git package/zz/luci-theme-alpha || { echo "luci-theme-alpha git clone failed"; exit 1; }
 fi
-if [ -d "package/zz/luci-app-alpha-config" ]; then
-    cd package/zz/luci-app-alpha-config
-    git pull || { echo "luci-app-alpha-config git pull failed"; exit 1; }
-    cd ../../..
-else
-    git clone https://github.com/derisamedia/luci-app-alpha-config.git package/zz/luci-app-alpha-config || { echo "luci-app-alpha-config git clone failed"; exit 1; }
-fi
