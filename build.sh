@@ -26,7 +26,10 @@ echo "Install qmodem feeds"
 
 # 修复 FM350-GL 信号/频段不显示问题（grep 缺少 -a 参数导致响应匹配失败）
 echo "Patch fibocom.sh: add grep -a for FM350-GL compatibility"
-find package/ -path "*/vendor/fibocom.sh" -exec sed -i 's/| grep/| grep -a/g' {} \; 2>/dev/null || true
+find . -name "fibocom.sh" -type f 2>/dev/null | while read f; do
+  echo "  Patching: $f"
+  sed -i 's/| grep/| grep -a/g' "$f"
+done
 
 # 导入配置文件并检查
 if [ ! -f "../m28c.config" ]; then
