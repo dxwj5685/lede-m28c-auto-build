@@ -22,7 +22,8 @@ echo "Install feeds"
 ./scripts/feeds install -a || { echo "install feeds failed"; exit 1; }
 
 echo "Install qmodem feeds"
-./scripts/feeds install -a -p qmodem || { echo "install qmodem feeds failed"; exit 1; }  # 去掉 -f 选项
+# ./scripts/feeds install -a -p qmodem || { echo "install qmodem feeds failed"; exit 1; }  # 去掉 -f 选项
+./scripts/feeds install -p qmodem qmodem luci-app-qmodem-next luci-app-qmodem-ttl sms_forwarder_next tom_modem || { echo "install qmodem feeds failed"; exit 1; }
 
 # 导入配置文件并检查
 if [ ! -f "../m28c.config" ]; then
