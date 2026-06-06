@@ -52,5 +52,5 @@ if [ $retry -eq 0 ]; then
 fi
 
 echo "Start compiling with verbose logs"
-make V=0 -j$(nproc) || { echo "make failed"; exit 1; }
-#make V=s -j$(nproc) || { echo "make failed"; exit 1; }  # 详细日志
+#make V=0 -j$(nproc) || { echo "make failed"; exit 1; }
+make V=s -j$(nproc) || { echo "make failed"; exit 1; }  # 详细日志
